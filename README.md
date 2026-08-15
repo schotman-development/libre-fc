@@ -24,9 +24,12 @@ and the app still runs on the skeleton's SQLite file rather than the Postgres se
 
 ## Running it
 
-`compose up` starts three services: `php` on :8000 (`artisan serve`), `node` on :5174
-(`npm run dev`), `db` on :5433. Images are fully qualified (`docker.io/library/…`) so
-Podman resolves them without prompting.
+`compose up` starts three services: `php` on :8000 (`artisan serve`), `db` on :5433, and
+`node` running `npm run dev`. Images are fully qualified (`docker.io/library/…`) so Podman
+resolves them without prompting.
+
+The `node` service publishes 5174, but nothing is listening there — the Vite dev server is
+not reachable from the host yet. See *Scaffold deltas* in the architecture doc.
 
 `Containerfile` builds PHP 8.5 with `pdo_pgsql` and Composer. Node 24 and Postgres 17 run
 as stock images — no build. Host port 5433 keeps a local Postgres out of the way.

@@ -108,7 +108,7 @@ libre-fc/
 │   ├── Feature/                      # flat, they're all API tests
 │   └── Unit/
 ├── Containerfile                     # php 8.5 + pdo_pgsql + composer
-├── compose.yaml                      # php :8000, node :5174, db :5433
+├── compose.yaml                      # php :8000, db :5433, node (see deltas)
 ├── composer.json
 ├── package.json
 ├── eslint.config.js
@@ -223,6 +223,16 @@ count.
 
 The skeleton shipped defaults that contradict decisions above. Unlike *Deferred*, these are
 not choices — they are drift, and this section should shrink to nothing.
+
+**The Vite dev server is unreachable from the host.** `compose.yaml` publishes `5174:5174`,
+and nothing binds it. The skeleton's `vite.config.js` sets no `server.port` and no
+`server.host`, so Vite takes its default 5173 and listens on loopback — which inside a
+container is the container's own loopback, not the host's. Two separate fixes: a port both
+sides agree on, and `0.0.0.0` so the bind is on an interface the forward can reach, the same
+reason the `php` service already passes `artisan serve --host=0.0.0.0`. Asset URLs are a
+third piece — `laravel-vite-plugin` writes them into the page and the browser resolves them
+in its own address space, so `server.hmr` / `server.origin` have to match what the host
+publishes. Not yet verified against a running dev server.
 
 **Postgres is running and unused.** `.env` and `phpunit.xml` both say `DB_CONNECTION=sqlite`,
 and `database/database.sqlite` exists. The `db` service and `pdo_pgsql` are in place, so this
