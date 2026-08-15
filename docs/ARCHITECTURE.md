@@ -16,9 +16,35 @@ Query against JSON API Resources. Monolith-vs-split-repo and Inertia-vs-JSON-API
 independent axes; this project takes the monolith on one and the explicit API contract
 on the other. The contract friction is the point — it is where the learning is.
 
+## Local environment
+
+Containers, three services: `php` (built from `Containerfile`), `node` and `db` (stock
+images). Nothing is installed on the host.
+
+**Vite runs in its own service, not inside the PHP container.** One image carrying both
+runtimes rebuilds whenever either moves, and PHP 8.5 and Node 24 have nothing to say to
+each other. Two containers, two lifecycles, one bind mount.
+
+**`artisan serve`, not php-fpm behind nginx.** One process, one port, no config files. A
+production-shaped web tier is a deploy concern and there is no deploy yet.
+
+**Image names are fully qualified** — `docker.io/library/postgres:17-alpine`, not
+`postgres:17-alpine`. Podman has no implicit registry and prompts for a choice without the
+prefix; Docker ignores it. The prefix costs nothing and makes the file portable between
+both.
+
+**The whole repo is bind-mounted at `/app`.** Which means `vendor/` and `node_modules/`
+are written into the working tree rather than into anonymous volumes — both gitignored,
+and a host editor can read them for completion and static analysis without a second
+install.
+
+**Postgres publishes on host 5433.** 5432 is usually already taken by a host Postgres, and
+a port collision at `compose up` is a worse first-run experience than a non-default number.
+
 ## Tree
 
-Unmarked directories are Laravel's default install.
+The target layout. What exists today is the stock skeleton plus the container files —
+see *Scaffold deltas*. Unmarked directories are Laravel's default install.
 
 ```
 libre-fc/
@@ -81,6 +107,8 @@ libre-fc/
 ├── tests/
 │   ├── Feature/                      # flat, they're all API tests
 │   └── Unit/
+├── Containerfile                     # php 8.5 + pdo_pgsql + composer
+├── compose.yaml                      # php :8000, node :5174, db :5433
 ├── composer.json
 ├── package.json
 ├── eslint.config.js
@@ -190,6 +218,37 @@ tests colocate as `Component.test.tsx` — no mirror tree to keep in sync.
 and rendering. The case worth testing is not the 3-1-0 arithmetic but two teams level on
 points where goal difference decides, with one postponed match in the set that must not
 count.
+
+## Scaffold deltas
+
+The skeleton shipped defaults that contradict decisions above. Unlike *Deferred*, these are
+not choices — they are drift, and this section should shrink to nothing.
+
+**Postgres is running and unused.** `.env` and `phpunit.xml` both say `DB_CONNECTION=sqlite`,
+and `database/database.sqlite` exists. The `db` service and `pdo_pgsql` are in place, so this
+is env configuration only — but the data model above leans on Postgres, and every migration
+written against SQLite is a migration whose column types were never really tested. Switch
+before the first migration, not after.
+
+**Tailwind is installed.** `resources/css/app.css` is `@import 'tailwindcss'`, and
+`@tailwindcss/vite` is in the Vite config. Utility classes and CSS Modules can coexist, but
+`tokens.css` is described above as the design system's real API, and a second styling system
+means every component has two right answers. Remove Tailwind, or supersede the *Styling*
+section deliberately — not by leaving both in place.
+
+**Pest is not installed.** `composer.json` has PHPUnit 12; `tests/Feature/ExampleTest.php`
+is a PHPUnit class. The `pestphp/pest-plugin` entry under `allow-plugins` is skeleton
+boilerplate, not an install.
+
+**Entry points are the skeleton's.** `vite.config.js` not `.ts`, `resources/js/app.js` not
+`main.tsx`, `welcome.blade.php` not `app.blade.php`, no `routes/api.php`. No `tsconfig.json`,
+`eslint.config.js`, `pint.json`, or CI workflow yet.
+
+**Fonts are self-hosted, which is fine.** `vite.config.js` uses `bunny('Instrument Sans')`
+from `laravel-vite-plugin/fonts`. The provider name is a source, not a runtime dependency —
+the plugin resolves the files at build time and emits them as Vite assets, so no request
+leaves the browser for a third party. No conflict with "no trackers"; noted because the
+config reads like a CDN link and someone will eventually flag it.
 
 ## Deferred
 

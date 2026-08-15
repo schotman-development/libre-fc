@@ -18,7 +18,21 @@ file.
 
 ## Status
 
-Documentation only. The application is not scaffolded yet.
+Scaffolded, no features. A stock Laravel 13 skeleton on PHP 8.5, plus a container stack.
+Nothing in `## Stack` above is wired up yet: no React, no TypeScript, no Vitest, no Pest,
+and the app still runs on the skeleton's SQLite file rather than the Postgres service.
+
+## Running it
+
+`compose up` starts three services: `php` on :8000 (`artisan serve`), `node` on :5174
+(`npm run dev`), `db` on :5433. Images are fully qualified (`docker.io/library/…`) so
+Podman resolves them without prompting.
+
+`Containerfile` builds PHP 8.5 with `pdo_pgsql` and Composer. Node 24 and Postgres 17 run
+as stock images — no build. Host port 5433 keeps a local Postgres out of the way.
+
+First run needs `composer install` in `php` and `npm install` in `node`; `composer setup`
+does both plus key generation and migrations, but only where both runtimes exist.
 
 ## Docs
 
